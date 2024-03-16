@@ -13,7 +13,7 @@ import {
   CardMedia,
 } from "@mui/material";
 import { collection, getDocs, query, where } from "firebase/firestore";
-import { onAuthStateChanged } from 'firebase/auth';
+import { onAuthStateChanged } from "firebase/auth";
 import { signOut } from "firebase/auth";
 import { auth, db } from "../../config/firebaseConfig/firebaseConfig";
 import { useNavigate } from "react-router-dom";
@@ -48,33 +48,37 @@ export default function StudentDashboard() {
 
   //!Get Student Data:
   async function getStudentData(uid) {
-    const q = query(
-      collection(db, "students"),
-      where("uid", "==", uid)
-    );
-    const arr = [];
-    const arr2 = [];
-    const querySnapshot2 = await getDocs(collection(db, "courses"));
-    querySnapshot2.forEach((doc) => {
-      arr2.push(doc.data());
-    });
-    const querySnapshot = await getDocs(q);
-    querySnapshot.forEach((doc) => {
-      arr.push(doc.data());
-    });
-    const dataWithCourses = arr.map((items) => {
-      const matchingCourse = arr2.find(
-        (item) => item.courseName === items.course
-      );
-      return {
-        ...items,
-        teacherName: matchingCourse?.teacherName || "", // Add teacherName to the student data
-        days: matchingCourse?.days || "", // Add days to the student data
-      };
-    });
+    try {
+      const q = query(collection(db, "students"), where("uid", "==", uid));
+      const arr = [];
+      const arr2 = [];
 
-    setData([...dataWithCourses]);
-    console.log(dataWithCourses);
+      const querySnapshot2 = await getDocs(collection(db, "courses"));
+      querySnapshot2.forEach((doc) => {
+        arr2.push(doc.data());
+      });
+
+      const querySnapshot = await getDocs(q);
+      querySnapshot.forEach((doc) => {
+        arr.push(doc.data());
+      });
+
+      const dataWithCourses = await Promise.all(arr.map( async (items) => {
+        const matchingCourse = arr2.find(
+          (item) => item.courseName === items.course
+        );
+        return {
+          ...items,
+          teacherName: matchingCourse?.teacherName || "", // Add teacherName to the student data
+          days: matchingCourse?.days || "", // Add days to the student data
+        };
+      }));
+
+      setData([...dataWithCourses]);
+      console.log("Data with courses:", dataWithCourses);
+    } catch (error) {
+      console.error("Error fetching student data:", error);
+    }
   }
 
   return (
